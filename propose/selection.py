@@ -135,7 +135,10 @@ class PROPOSE:
                                    hidden=self.hidden,
                                    activation=self.activation,
                                    preselected_inds=self.preselected_relative)
+        if hasattr(self, 'labels'):
+            model.labels = self.labels
         model = model.to(self.device)
+
 
         # Determine lam_init, if necessary.
         if lam_init is None:
@@ -219,6 +222,8 @@ class PROPOSE:
                         hidden=self.hidden,
                         activation=self.activation,
                         preselected_inds=self.preselected_relative)
+                    if hasattr(self, 'labels'):
+                        model.labels = self.labels
                     model = model.to(self.device)
                 else:
                     print('Warm starting model for next iteration')
@@ -289,6 +294,8 @@ class PROPOSE:
                                    activation=self.activation,
                                    preselected_inds=self.preselected_relative,
                                    num_selections=num_genes)
+        if hasattr(self, 'labels'):
+            model.labels = self.labels
         model = model.to(self.device)
 
         # Train.

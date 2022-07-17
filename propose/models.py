@@ -530,6 +530,12 @@ class SelectorMLP(nn.Module):
                 val_loss, val_expressed = self.validate(
                     val_loader, loss_fn, lam, eta)
                 val_loss, val_expressed = val_loss.item(), val_expressed.item()
+
+                # Calculate additional metrics
+                if hasattr(self,'labels'):
+                    self.metrics(train_loader,'train')
+                    self.metrics(val_loader, 'val')
+
                 self.train()
 
                 # Record loss.
@@ -604,3 +610,35 @@ class SelectorMLP(nn.Module):
                 N += n
 
         return mean_loss, mean_expressed
+
+
+    def metrics(self, loader, subset):
+        """Calculate class label-wise fraction correct
+
+        Args:
+            loader (DataLoader): DataLoader object
+            subset (str): describes partition of data
+
+        Returns:
+        """
+        if not hasattr(self, 'frac_correct'):
+            self.frac_correct = {}
+
+        device = next(self.parameters()).device
+        n_label_true = {label:0 for label in self.labels}
+        n_label_pred = {label:0 for label in self.labels}
+        frac_correct = {label:0 for label in self.labels}
+        with torch.no_grad():
+            for x, y in loader:
+                # Move to GPU.
+                x = x.to(device=device)
+                y = y.to(device=device)
+                pred, _, _ = self.forward(x)
+                pred = torch.exp(nn.functional.log_softmax(pred, dim=1))
+                pred = torch.argmax(pred, dim=1)
+                for label in self.labels:
+                    n_label_true[label] = n_label_true[label]+torch.sum(y==label)
+                    n_label_pred[label] = n_label_pred[label]+torch.sum(torch.logical_and(y==label, pred==label))
+
+            self.frac_correct[subset] = {label:n_label_pred[label]/(n_label_true[label] + torch.finfo().eps) for label in self.labels}
+        return frac_correct
